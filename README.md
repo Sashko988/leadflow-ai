@@ -20,6 +20,8 @@ The repository includes `render.yaml`. Push this folder to a GitHub repository, 
 
 The included SQLite database is suitable for an MVP demo only. A public client deployment should use a managed Postgres database or a persistent disk before storing important customer data.
 
+The public landing page uses `/demo` for demo requests. Configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, and `CONTACT_EMAIL` in Render. For Gmail, use an App Password rather than your normal account password.
+
 ## What changed for client readiness
 
 - Documented CLI entrypoint: `app.py`, plus web MVP entrypoint: `web.py`.

@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import argparse
 import secrets
+import smtplib
+from email.message import EmailMessage
 from functools import wraps
 
 from flask import Flask, flash, redirect, render_template_string, request, session, url_for
@@ -28,10 +30,14 @@ BASE_TEMPLATE = """
 """
 
 LANDING_TEMPLATE = """
-<section class="hero"><div class="eyebrow">AI-powered lead response system</div><h1>Stop letting valuable leads go cold.</h1><p>LeadFlow AI analyzes new inquiries, identifies your highest-potential prospects, and prepares personalized replies — so your team can respond faster and close more business.</p><div class="hero-actions"><a class="button" href="mailto:{{contact_email}}?subject=LeadFlow AI demo">Book a free demo →</a><a class="button secondary" href="#features">See how it works</a></div></section>
+<section class="hero"><div class="eyebrow">AI-powered lead response system</div><h1>Stop letting valuable leads go cold.</h1><p>LeadFlow AI analyzes new inquiries, identifies your highest-potential prospects, and prepares personalized replies — so your team can respond faster and close more business.</p><div class="hero-actions"><a class="button" href="{{url_for('demo')}}">Book a free demo →</a><a class="button secondary" href="#features">See how it works</a></div></section>
 <section class="section" id="features"><div class="eyebrow">What you get</div><h2>From inbox to next step.</h2><p class="section-intro">A simple workflow that helps sales teams respond on time, with better context and less manual sorting.</p><div class="grid" style="margin-top:26px"><div class="card feature"><div class="icon">✦</div><h3>AI lead qualification</h3><p>Every lead receives a score and HOT, WARM, or COLD category based on need, budget, and urgency.</p></div><div class="card feature"><div class="icon">↗</div><h3>Personalized replies</h3><p>Generate a professional draft based on the real inquiry — without inventing prices or promises.</p></div><div class="card feature"><div class="icon">◉</div><h3>Clear dashboard</h3><p>Keep prospects organized in one place with priorities, details, and a recommended next action.</p></div></div></section>
 <section class="section"><div class="eyebrow">How it works</div><h2>Three steps to better follow-up.</h2><div class="steps" style="margin-top:28px"><div class="step"><h3>1. A lead arrives</h3><p>A message from a web form or inbox enters the workflow.</p></div><div class="step"><h3>2. AI understands the context</h3><p>The system extracts needs, budget, timeline, and buying intent.</p></div><div class="step"><h3>3. Your team moves faster</h3><p>Get a clear priority and a ready-to-review draft reply.</p></div></div></section>
-<section class="cta"><h2>Ready to lose fewer leads?</h2><p>Book a short demo and see how this workflow can fit your business.</p><a class="button" href="mailto:{{contact_email}}?subject=LeadFlow AI demo">Book a demo</a></section><div class="landing-footer">LeadFlow AI · AI automation for service businesses</div>
+<section class="cta"><h2>Ready to lose fewer leads?</h2><p>Book a short demo and see how this workflow can fit your business.</p><a class="button" href="{{url_for('demo')}}">Book a demo</a></section><div class="landing-footer">LeadFlow AI · AI automation for service businesses</div>
+"""
+
+DEMO_TEMPLATE = """
+<div class="card" style="max-width:680px;margin:40px auto"><div class="eyebrow">Let's talk</div><h1>Book a free demo</h1><p class="section-intro">Tell us a little about your business and we will get back to you with next steps.</p>{% if success %}<div class="flash">Thanks — your demo request has been sent. We will be in touch shortly.</div>{% else %}<form method="post"><label for="name">Full name</label><input id="name" name="name" autocomplete="name" required><label for="email">Work email</label><input id="email" name="email" type="email" autocomplete="email" required><label for="company">Company</label><input id="company" name="company" autocomplete="organization"><label for="message">What would you like to automate?</label><textarea id="message" name="message" rows="6" placeholder="Tell us about your lead flow, inbox, or sales process..."></textarea><input name="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true"><button type="submit">Send demo request</button></form>{% endif %}<p style="margin-top:22px"><a href="{{url_for('landing')}}">← Back to home</a></p></div>
 """
 
 
@@ -101,6 +107,39 @@ def logout():
 @app.get("/")
 def landing():
     return page(LANDING_TEMPLATE, contact_email=config.CONTACT_EMAIL, title="LeadFlow AI")
+
+
+@app.route("/demo", methods=["GET", "POST"])
+def demo():
+    success = False
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip()
+        company = request.form.get("company", "").strip()
+        message_text = request.form.get("message", "").strip()
+        honeypot = request.form.get("website", "").strip()
+        if honeypot:
+            success = True
+        elif not name or "@" not in email:
+            flash("Please enter your name and a valid work email.", "error")
+        elif not config.SMTP_USER or not config.SMTP_PASSWORD:
+            flash("Demo requests are not configured yet. Please try again later.", "error")
+        else:
+            try:
+                msg = EmailMessage()
+                msg["Subject"] = f"New LeadFlow AI demo request from {name}"
+                msg["From"] = config.SMTP_USER
+                msg["To"] = config.CONTACT_EMAIL
+                msg["Reply-To"] = email
+                msg.set_content(f"Name: {name}\nEmail: {email}\nCompany: {company or '-'}\n\nWhat they want to automate:\n{message_text or '-'}")
+                with smtplib.SMTP(config.SMTP_HOST, config.SMTP_PORT, timeout=20) as smtp:
+                    smtp.starttls()
+                    smtp.login(config.SMTP_USER, config.SMTP_PASSWORD)
+                    smtp.send_message(msg)
+                success = True
+            except Exception:
+                flash("We could not send your request right now. Please try again shortly.", "error")
+    return page(DEMO_TEMPLATE, success=success, title="Book a demo")
 
 
 @app.get("/dashboard")
