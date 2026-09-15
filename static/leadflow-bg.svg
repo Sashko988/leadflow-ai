@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1200" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="violet" cx="72%" cy="18%" r="58%"><stop offset="0" stop-color="#8c7cff" stop-opacity=".92"/><stop offset=".32" stop-color="#463d9b" stop-opacity=".55"/><stop offset="1" stop-color="#101114" stop-opacity="0"/></radialGradient>
+    <radialGradient id="acid" cx="18%" cy="88%" r="48%"><stop offset="0" stop-color="#d7ff55" stop-opacity=".42"/><stop offset="1" stop-color="#101114" stop-opacity="0"/></radialGradient>
+    <linearGradient id="grid" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff" stop-opacity=".09"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#d7ff55" stop-opacity=".08"/></linearGradient>
+    <filter id="blur"><feGaussianBlur stdDeviation="34"/></filter>
+  </defs>
+  <rect width="1920" height="1200" fill="#101114"/><rect width="1920" height="1200" fill="url(#violet)"/><rect width="1920" height="1200" fill="url(#acid)"/>
+  <g fill="none" stroke="url(#grid)" stroke-width="2" opacity=".65"><path d="M-200 950C330 450 625 1310 1190 650S1850 120 2200 220"/><path d="M-200 1030C330 530 625 1390 1190 730S1850 200 2200 300"/><path d="M-200 1110C330 610 625 1470 1190 810S1850 280 2200 380"/><path d="M-200 870C330 370 625 1230 1190 570S1850 40 2200 140"/></g>
+  <circle cx="1470" cy="300" r="300" fill="none" stroke="#fff" stroke-opacity=".13" stroke-width="2"/><circle cx="1470" cy="300" r="220" fill="none" stroke="#d7ff55" stroke-opacity=".18" stroke-width="2"/><circle cx="1470" cy="300" r="90" fill="#d7ff55" fill-opacity=".34" filter="url(#blur)"/>
+  <g fill="#fff"><circle cx="1470" cy="0" r="5" opacity=".8"/><circle cx="1174" cy="300" r="4" opacity=".55"/><circle cx="360" cy="900" r="4" opacity=".55"/><circle cx="1680" cy="820" r="3" opacity=".7"/></g>
+</svg>
