@@ -138,6 +138,7 @@ def demo():
                     smtp.send_message(msg)
                 success = True
             except Exception:
+                app.logger.exception("Demo request SMTP delivery failed")
                 flash("We could not send your request right now. Please try again shortly.", "error")
     return page(DEMO_TEMPLATE, success=success, title="Book a demo")
 
