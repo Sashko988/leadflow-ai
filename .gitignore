@@ -1,0 +1,12 @@
+.env
+credentials.json
+token.json
+*.db
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.idea/
+.vscode/
+
