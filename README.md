@@ -16,11 +16,31 @@ Open `http://127.0.0.1:8000`. Set `ADMIN_PASSWORD` in `.env` before running setu
 
 ## Deploy on Render
 
-The repository includes `render.yaml`. Push this folder to a GitHub repository, then create a new Render Blueprint from that repository. Render will use `pip install -r requirements.txt` and `gunicorn web:app --bind 0.0.0.0:$PORT --workers 2` to build and run the service. Add the secret environment variables requested by the Blueprint (`OPENAI_API_KEY`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and `CONTACT_EMAIL`). The `/health` endpoint can be used as a basic health check.
+The repository includes `render.yaml`. Push this folder to a GitHub repository, then create a new Render Blueprint from that repository. Render will use `pip install -r requirements.txt` and a small Gunicorn configuration to build and run the service. Add the secret environment variables requested by the Blueprint (`OPENAI_API_KEY`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and `CONTACT_EMAIL`). The `/health` endpoint is configured as the Render health check.
 
 The included SQLite database is suitable for an MVP demo only. A public client deployment should use a managed Postgres database or a persistent disk before storing important customer data.
 
 The public landing page uses `/demo` for demo requests. Configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, and `CONTACT_EMAIL` in Render. For Gmail, use an App Password rather than your normal account password.
+
+### Google and Microsoft sign-in
+
+The login page supports Google and Microsoft OAuth when configured. Add these Render environment variables:
+
+```text
+GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET
+MICROSOFT_CLIENT_ID
+MICROSOFT_CLIENT_SECRET
+```
+
+Register these HTTPS callback URLs in the provider consoles:
+
+```text
+https://YOUR-DOMAIN/auth/google/callback
+https://YOUR-DOMAIN/auth/microsoft/callback
+```
+
+For the current deployment, replace `YOUR-DOMAIN` with `leadflow-ai-0lxd.onrender.com`. OAuth users automatically receive a workspace and are connected to their own dashboard.
 
 ## What changed for client readiness
 

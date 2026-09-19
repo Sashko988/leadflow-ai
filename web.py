@@ -14,12 +14,37 @@ from functools import wraps
 
 from flask import Flask, flash, redirect, render_template_string, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.middleware.proxy_fix import ProxyFix
+
+try:
+    from authlib.integrations.flask_client import OAuth
+except ImportError:
+    OAuth = None
 
 import app as core
 import config
 
 app = Flask(__name__)
 app.secret_key = config.WEB_SECRET_KEY
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
+oauth = OAuth(app) if OAuth else None
+if oauth and config.GOOGLE_CLIENT_ID and config.GOOGLE_CLIENT_SECRET:
+    oauth.register(
+        name="google",
+        client_id=config.GOOGLE_CLIENT_ID,
+        client_secret=config.GOOGLE_CLIENT_SECRET,
+        server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+        client_kwargs={"scope": "openid email profile"},
+    )
+if oauth and config.MICROSOFT_CLIENT_ID and config.MICROSOFT_CLIENT_SECRET:
+    oauth.register(
+        name="microsoft",
+        client_id=config.MICROSOFT_CLIENT_ID,
+        client_secret=config.MICROSOFT_CLIENT_SECRET,
+        server_metadata_url="https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration",
+        client_kwargs={"scope": "openid email profile User.Read"},
+    )
 
 BASE_TEMPLATE = """
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -105,6 +130,82 @@ def health():
 ensure_admin_account()
 
 
+def oauth_client(provider: str):
+    if not oauth:
+        return None
+    return oauth.create_client(provider)
+
+
+def finish_oauth_login(profile: dict, provider: str):
+    email = (profile.get("email") or profile.get("preferred_username") or "").strip().lower()
+    if not email or "@" not in email:
+        raise RuntimeError(f"{provider.title()} did not provide a usable email address.")
+    display_name = (profile.get("name") or profile.get("given_name") or email.split("@", 1)[0]).strip()
+    with core.db() as conn:
+        existing = conn.execute("SELECT id,tenant_id FROM users WHERE email=?", (email,)).fetchone()
+        if existing:
+            user_id, tenant_id = existing["id"], existing["tenant_id"]
+        else:
+            workspace_name = f"{display_name}'s Workspace"
+            tenant_id = conn.execute(
+                "INSERT INTO tenants(name,created_at) VALUES(?,?)", (workspace_name, core.now())
+            ).lastrowid
+            user_id = conn.execute(
+                "INSERT INTO users(tenant_id,email,password_hash,created_at) VALUES(?,?,?,?)",
+                (tenant_id, email, generate_password_hash(secrets.token_urlsafe(32)), core.now()),
+            ).lastrowid
+    session.update(user_id=user_id, tenant_id=tenant_id, email=email)
+    return redirect(url_for("dashboard"))
+
+
+@app.get("/auth/google")
+def google_login():
+    client = oauth_client("google")
+    if not client:
+        flash("Google sign-in is not configured yet. Please use email and password.", "error")
+        return redirect(url_for("login"))
+    return client.authorize_redirect(url_for("google_callback", _external=True))
+
+
+@app.get("/auth/google/callback")
+def google_callback():
+    try:
+        client = oauth_client("google")
+        if not client:
+            raise RuntimeError("Google sign-in is not configured.")
+        token = client.authorize_access_token()
+        profile = token.get("userinfo") or client.userinfo()
+        return finish_oauth_login(dict(profile), "Google")
+    except Exception:
+        app.logger.exception("Google OAuth sign-in failed")
+        flash("Google sign-in could not be completed. Please try again.", "error")
+        return redirect(url_for("login"))
+
+
+@app.get("/auth/microsoft")
+def microsoft_login():
+    client = oauth_client("microsoft")
+    if not client:
+        flash("Microsoft sign-in is not configured yet. Please use email and password.", "error")
+        return redirect(url_for("login"))
+    return client.authorize_redirect(url_for("microsoft_callback", _external=True))
+
+
+@app.get("/auth/microsoft/callback")
+def microsoft_callback():
+    try:
+        client = oauth_client("microsoft")
+        if not client:
+            raise RuntimeError("Microsoft sign-in is not configured.")
+        token = client.authorize_access_token()
+        profile = token.get("userinfo") or client.userinfo()
+        return finish_oauth_login(dict(profile), "Microsoft")
+    except Exception:
+        app.logger.exception("Microsoft OAuth sign-in failed")
+        flash("Microsoft sign-in could not be completed. Please try again.", "error")
+        return redirect(url_for("login"))
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -116,7 +217,9 @@ def login():
             return redirect(url_for("dashboard"))
         flash("Invalid email or password.", "error")
     return page("""
-    <div class="card" style="max-width:420px;margin:60px auto"><h1>Sign in</h1><form method="post">
+    <div class="card" style="max-width:420px;margin:60px auto"><h1>Sign in</h1><p class="muted">Use your work account to access your LeadFlow workspace.</p>
+    <div style="display:grid;gap:10px;margin:20px 0"><a class="button secondary" href="{{url_for('google_login')}}" style="text-align:center">Continue with Google</a><a class="button secondary" href="{{url_for('microsoft_login')}}" style="text-align:center">Continue with Microsoft</a></div>
+    <div class="muted" style="text-align:center;margin:16px 0">or use email</div><form method="post">
     <label>Email</label><input name="email" type="email" required><label>Password</label><input name="password" type="password" required><button>Sign in</button></form></div>
     """)
 

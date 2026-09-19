@@ -23,6 +23,14 @@ services:
         sync: false
       - key: ADMIN_PASSWORD
         sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: MICROSOFT_CLIENT_ID
+        sync: false
+      - key: MICROSOFT_CLIENT_SECRET
+        sync: false
       - key: CONTACT_EMAIL
         sync: false
       - key: SMTP_HOST
