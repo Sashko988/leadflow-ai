@@ -41,6 +41,13 @@ class WebRouteTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn("/login", response.headers["Location"])
 
+    def test_new_lead_requires_login(self):
+        with self.client.session_transaction() as session:
+            session.clear()
+        response = self.client.get("/leads/new")
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login", response.headers["Location"])
+
 
 if __name__ == "__main__":
     unittest.main()

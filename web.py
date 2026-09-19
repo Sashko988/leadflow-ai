@@ -200,8 +200,9 @@ def new_lead():
                     values += [lead["lead_score"], lead["status"], lead.get("reason"), lead.get("recommended_action"), reply, core.now()]
                     cur = conn.execute("""INSERT INTO leads (tenant_id,name,company,email,phone,service,budget,timeline,lead_score,status,reason,recommended_action,ai_email,created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", [current_tenant_id(), *values])
                 return redirect(url_for("lead_detail", lead_id=cur.lastrowid))
-            except Exception as exc:
-                flash(f"Analysis failed: {exc}", "error")
+            except Exception:
+                app.logger.exception("Lead analysis failed")
+                flash("We could not analyze this lead right now. Please check your AI configuration and try again.", "error")
     return page("""<h1>Add lead</h1><div class="card"><form method="post"><label>Paste incoming lead email/message</label><textarea name="text" rows="12" required></textarea><button>Analyze and save</button></form></div>""")
 
 
